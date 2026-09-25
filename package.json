@@ -1,0 +1,21 @@
+{
+  "name": "worktrack",
+  "version": "1.0.0",
+  "description": "A simple personal work-hours and earnings tracker — vanilla JS, no build-heavy framework, your data stays in your browser.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8"
+  }
+}

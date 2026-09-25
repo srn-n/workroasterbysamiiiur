@@ -1,0 +1,593 @@
+/* ------------------------------------------------------------------ */
+/* WorkTrack — design tokens                                          */
+/* Calm, modern SaaS look (Clockify/Toggl-adjacent): neutral surfaces, */
+/* thin borders, very subtle shadows, moderate radius. Purple is the  */
+/* one accent used for actions/emphasis; success/warning/danger are   */
+/* reserved for things that actually carry that meaning (money, edit  */
+/* state, destructive actions) — never used decoratively.             */
+/* ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --bg: #f7f8fa;
+  --bg-subtle: #f1f2f5;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --text: #202124;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+
+  --primary: #5b5bd6;
+  --primary-hover: #4848b8;
+  --primary-soft: #eeeefc;
+  --primary-text: #5b5bd6;
+
+  --success: #2e9b68;
+  --success-soft: #e6f4ed;
+  --success-text: #257e54;
+
+  --warning: #d99a24;
+  --warning-soft: #fbf0dc;
+  --warning-text: #956a19;
+
+  --danger: #d35454;
+  --danger-soft: #fbe9e9;
+  --danger-text: #aa2c2c;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 10px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 16px 32px rgba(16, 24, 40, 0.14);
+  --focus-ring: 0 0 0 3px rgba(91, 91, 214, 0.25);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --transition: 140ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #16171b;
+    --bg-subtle: #1d1e24;
+    --surface: #1e1f26;
+    --surface-raised: #24252d;
+    --border: #2c2e37;
+    --border-strong: #3a3c47;
+    --text: #eef0f3;
+    --text-muted: #a4abb8;
+    --text-faint: #6f7684;
+
+    --primary: #5b5bd6;
+    --primary-hover: #6f6ee2;
+    --primary-soft: #26253f;
+    --primary-text: #9291f2;
+
+    --success: #2e9b68;
+    --success-soft: #16281f;
+    --success-text: #4fcf95;
+
+    --warning: #d99a24;
+    --warning-soft: #2c2314;
+    --warning-text: #eab54f;
+
+    --danger: #d35454;
+    --danger-soft: #2e1a1a;
+    --danger-text: #ec7c7c;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.55);
+    --focus-ring: 0 0 0 3px rgba(146, 145, 242, 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #16171b;
+  --bg-subtle: #1d1e24;
+  --surface: #1e1f26;
+  --surface-raised: #24252d;
+  --border: #2c2e37;
+  --border-strong: #3a3c47;
+  --text: #eef0f3;
+  --text-muted: #a4abb8;
+  --text-faint: #6f7684;
+
+  --primary: #5b5bd6;
+  --primary-hover: #6f6ee2;
+  --primary-soft: #26253f;
+  --primary-text: #9291f2;
+
+  --success: #2e9b68;
+  --success-soft: #16281f;
+  --success-text: #4fcf95;
+
+  --warning: #d99a24;
+  --warning-soft: #2c2314;
+  --warning-text: #eab54f;
+
+  --danger: #d35454;
+  --danger-soft: #2e1a1a;
+  --danger-text: #ec7c7c;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.55);
+  --focus-ring: 0 0 0 3px rgba(146, 145, 242, 0.35);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reset & base                                                       */
+/* ------------------------------------------------------------------ */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--transition), color var(--transition);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { font-family: var(--font-sans); }
+ul { list-style: none; margin: 0; padding: 0; }
+
+a { color: var(--primary-text); }
+
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted { color: var(--text-faint); }
+.optional { font-weight: 400; text-transform: none; color: var(--text-faint); letter-spacing: 0; }
+
+/* ------------------------------------------------------------------ */
+/* Shell & layout                                                     */
+/* ------------------------------------------------------------------ */
+.app-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.app-header h1 {
+  margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--text);
+}
+.subtitle { margin: 2px 0 0; font-size: 13px; color: var(--text-muted); }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ------------------------------------------------------------------ */
+/* Buttons                                                             */
+/* ------------------------------------------------------------------ */
+.btn {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  height: 38px;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-hover); }
+.btn.secondary { background: var(--surface); color: var(--text); border-color: var(--border); box-shadow: var(--shadow-sm); }
+.btn.secondary:hover { background: var(--bg-subtle); border-color: var(--border-strong); }
+.btn.danger-outline { background: transparent; color: var(--danger-text); border-color: var(--danger); }
+.btn.danger-outline:hover { background: var(--danger-soft); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* The Add Record button is the one clear call-to-action on the page —
+   distinguished by being the only filled purple control, not by size. */
+.form-panel .form-actions .btn.primary {
+  padding: 0 22px;
+}
+
+.icon-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  height: 38px;
+  min-width: 38px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.icon-btn:hover { background: var(--bg-subtle); color: var(--text); border-color: var(--border-strong); }
+.icon-btn.small { height: 30px; min-width: 30px; padding: 0 8px; font-size: 12px; font-weight: 600; }
+.icon-btn.danger:hover { background: var(--danger-soft); color: var(--danger-text); border-color: var(--danger); }
+
+/* ------------------------------------------------------------------ */
+/* Panels & fields                                                    */
+/* ------------------------------------------------------------------ */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.panel-head h2 { margin: 0; font-size: 15.5px; font-weight: 700; }
+.panel-hint { margin: 3px 0 0; font-size: 12.5px; color: var(--text-muted); max-width: 48ch; }
+
+.form-panel .panel-head h2 { font-size: 17px; }
+
+.editing-badge {
+  background: var(--warning-soft); color: var(--warning-text);
+  padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  white-space: nowrap;
+}
+
+.field-group {
+  border: 0; padding: 0; margin: 0 0 22px;
+}
+.field-group legend {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--text-faint); padding: 0 0 12px;
+}
+.field-group:last-of-type { margin-bottom: 0; }
+
+.grid { display: grid; gap: 16px; }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+.field label {
+  display: block; font-size: 12.5px; font-weight: 600;
+  color: var(--text-muted); margin: 0 0 6px;
+}
+.field input, .field select {
+  width: 100%; height: 38px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.field input:hover, .field select:hover { border-color: var(--border-strong); }
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+.field-help { display: block; margin-top: 6px; font-size: 11.5px; color: var(--text-faint); }
+
+.duration-row { display: flex; align-items: center; gap: 8px; }
+.duration-row input { min-width: 0; text-align: center; }
+.duration-unit { font-size: 12.5px; font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
+
+.prefix-input { position: relative; }
+.prefix-input .prefix {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-faint); font-weight: 600; pointer-events: none; font-size: 13px;
+}
+.prefix-input input { padding-left: 30px; }
+
+.rate-output {
+  display: flex; align-items: center; height: 38px; padding: 0 12px;
+  border-radius: var(--radius-sm); background: var(--primary-soft);
+  color: var(--primary-text); font-weight: 700; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--primary-soft);
+}
+
+.form-error { color: var(--danger-text); font-size: 12.5px; min-height: 16px; margin: 4px 0 4px; font-weight: 600; }
+.form-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+
+/* ------------------------------------------------------------------ */
+/* Stats — 3-column desktop grid of compact, uniform blocks           */
+/* ------------------------------------------------------------------ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition);
+}
+.stat-card:hover { border-color: var(--border-strong); }
+
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
+.stat-value { font-size: 20px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--text); }
+
+/* Colour is applied only where the number itself carries meaning: a
+   money total (accent-pay) or the one computed rate (accent-rate). A
+   plain fact (hours, record count) stays neutral — the six tiles read
+   as one consistent set, not six competing colours. */
+.stat-card.accent-pay .stat-value { color: var(--success-text); }
+.stat-card.accent-rate .stat-value { color: var(--primary-text); }
+
+/* ------------------------------------------------------------------ */
+/* Work calendar                                                      */
+/* ------------------------------------------------------------------ */
+.calendar-legend {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  white-space: nowrap;
+}
+.calendar-legend .calendar-dot { position: static; }
+
+.calendar-weekday-row {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+  margin-bottom: 1px;
+}
+.calendar-weekday {
+  text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; color: var(--text-faint); padding: 0 0 8px;
+}
+
+/* A hairline-bordered grid — closer to a data table than decorative
+   tiles, in keeping with a time-tracking product's calendar view. */
+.calendar-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.calendar-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex; align-items: flex-start; justify-content: flex-start;
+  padding: 6px;
+  background: var(--surface);
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted);
+}
+.calendar-day.is-outside { color: var(--text-faint); background: var(--bg-subtle); }
+.calendar-day.is-today {
+  box-shadow: inset 0 0 0 2px var(--primary);
+  color: var(--primary-text); font-weight: 700;
+}
+.calendar-day.has-work { background: var(--primary-soft); color: var(--text); font-weight: 600; }
+.calendar-day.has-work.is-outside { background: var(--bg-subtle); }
+
+.calendar-dot {
+  position: absolute; bottom: 6px; left: 6px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
+}
+.calendar-pill {
+  position: absolute; bottom: 4px; left: 6px;
+  min-width: 16px; height: 14px; padding: 0 4px; border-radius: 999px;
+  background: var(--primary); color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Records                                                             */
+/* ------------------------------------------------------------------ */
+.cycle-group { margin-bottom: 16px; }
+.cycle-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 16px; background: var(--bg-subtle); border: 1px solid var(--border);
+  border-radius: var(--radius-md); margin-bottom: 8px; flex-wrap: wrap;
+}
+.cycle-name { font-weight: 700; font-size: 13.5px; }
+.cycle-count { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+.cycle-head-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cycle-totals { display: flex; gap: 12px; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; }
+.cycle-pay { color: var(--success-text); }
+.cycle-export-actions { display: flex; gap: 6px; }
+.cycle-export-actions .icon-btn.small { font-weight: 700; }
+.legacy-cycle { color: var(--text-faint); font-style: italic; }
+
+.record-list { display: flex; flex-direction: column; gap: 6px; }
+.record-row {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.record-row:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+
+.record-main {
+  display: grid;
+  grid-template-columns: 72px 92px 1fr auto auto;
+  align-items: center;
+  gap: 16px;
+}
+.record-date { line-height: 1.3; }
+.record-day { display: block; font-weight: 650; font-size: 13px; }
+.record-date-label { display: block; font-size: 11.5px; color: var(--text-muted); }
+
+.record-time { line-height: 1.3; }
+.record-start { display: block; font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--text); }
+.record-duration { display: block; font-size: 11.5px; color: var(--text-muted); }
+
+.record-notes { color: var(--text-muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Payment amount and its hourly rate get the clearest visual weight
+   in the row so both are easy to scan down a list of records. */
+.record-pay { text-align: right; line-height: 1.3; }
+.record-amount { display: block; font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; color: var(--success-text); }
+.record-rate { display: block; font-size: 12px; color: var(--primary-text); font-weight: 600; margin-top: 1px; }
+
+.record-actions { display: flex; gap: 6px; }
+
+.record-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 11.5px; color: var(--text-muted); }
+.tag {
+  background: var(--bg-subtle); color: var(--text-muted); border: 1px solid transparent;
+  padding: 3px 9px; border-radius: 999px; font-weight: 600;
+}
+.tag.muted-tag { background: transparent; color: var(--text-muted); border-color: var(--border); }
+.meta-item b { color: var(--text); font-weight: 600; }
+
+/* ------------------------------------------------------------------ */
+/* Empty state                                                        */
+/* ------------------------------------------------------------------ */
+.empty-state { text-align: center; padding: 52px 20px; }
+.empty-icon {
+  font-size: 26px; margin: 0 auto 14px; width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-subtle); border-radius: var(--radius-lg);
+}
+.empty-state h3 { margin: 0 0 6px; font-size: 15.5px; font-weight: 700; }
+.empty-state p { margin: 0 0 18px; color: var(--text-muted); font-size: 13px; }
+
+/* ------------------------------------------------------------------ */
+/* Insights                                                            */
+/* ------------------------------------------------------------------ */
+.insights { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.insight-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 18px; box-shadow: var(--shadow-sm);
+}
+.insight-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.insight-value { font-size: 21px; font-weight: 700; margin-top: 7px; color: var(--text); }
+.insight-card:nth-child(2) .insight-value { color: var(--primary-text); }
+.insight-note { font-size: 12px; color: var(--text-muted); margin: 6px 0 0; }
+
+/* ------------------------------------------------------------------ */
+/* Modals                                                              */
+/* ------------------------------------------------------------------ */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(32, 33, 36, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  z-index: 50;
+}
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto;
+  border: 1px solid var(--border);
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0;
+  background: var(--surface); z-index: 1;
+}
+.modal-head h2 { margin: 0; font-size: 15.5px; font-weight: 700; }
+.modal-body { padding: 18px 20px 22px; }
+.modal-tabs { display: flex; gap: 6px; padding: 12px 20px 0; }
+.tab {
+  border: 0; background: transparent; color: var(--text-muted); font-weight: 600;
+  font-size: 13px; padding: 8px 4px; cursor: pointer; border-bottom: 2px solid transparent;
+  margin-right: 14px;
+}
+.tab.active { color: var(--primary-text); border-bottom-color: var(--primary); }
+
+.data-section { margin-bottom: 20px; }
+.data-section:last-child { margin-bottom: 0; }
+.data-section h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 700; }
+.data-section .panel-hint { margin-bottom: 12px; }
+.danger-zone { padding-top: 16px; border-top: 1px solid var(--border); }
+
+.option-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.chip-tab {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.chip-tab.active { background: var(--primary-soft); color: var(--primary-text); border-color: var(--primary-soft); }
+
+.option-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.option-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+}
+.option-row.is-archived { opacity: 0.6; }
+.option-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.option-label { font-weight: 600; font-size: 13px; }
+.option-usage { font-size: 11px; color: var(--text-faint); }
+.option-actions { display: flex; gap: 4px; }
+
+.add-option-row { display: flex; gap: 8px; }
+.add-option-row input {
+  flex: 1; height: 38px; padding: 0 12px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Toast                                                               */
+/* ------------------------------------------------------------------ */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg); padding: 11px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg); z-index: 60;
+}
+.toast-error { background: var(--danger); color: #fff; }
+
+/* ------------------------------------------------------------------ */
+/* Motion — minimal; nothing bounces or overshoots                    */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+@media (max-width: 860px) {
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .insights { grid-template-columns: 1fr; }
+  .record-main { grid-template-columns: 56px 1fr auto; row-gap: 6px; }
+  .record-notes { grid-column: 1 / 3; order: 3; }
+  .record-time { order: 2; }
+  .record-pay { grid-column: 3; grid-row: 1; }
+  .record-actions { grid-column: 3; grid-row: 2; align-self: start; }
+}
+
+@media (max-width: 560px) {
+  .app-shell { padding: 20px 16px 60px; }
+  .app-header { align-items: flex-start; }
+  /* Summary collapses to a single column — full-width rows, not
+     cramped side-by-side tiles. */
+  .stats { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .header-actions .btn.secondary { padding: 0 12px; font-size: 12.5px; }
+  .record-main { grid-template-columns: 1fr auto; }
+  .record-date { grid-column: 1 / 2; }
+  .record-notes { grid-column: 1 / 3; }
+  .record-pay { grid-column: 2; grid-row: 1; }
+  .record-actions { grid-column: 2; grid-row: 3; }
+  .cycle-head { flex-direction: column; align-items: flex-start; }
+  .cycle-head-actions { width: 100%; justify-content: space-between; }
+  .cycle-totals { flex-direction: column; gap: 2px; text-align: right; }
+
+  .calendar-day { padding: 4px; font-size: 11px; }
+  .calendar-dot { width: 5px; height: 5px; bottom: 4px; left: 4px; }
+  .calendar-pill { min-width: 13px; height: 12px; font-size: 8px; bottom: 3px; left: 4px; }
+}
