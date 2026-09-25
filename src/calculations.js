@@ -50,6 +50,28 @@ export function hourlyRate(pay, minutes) {
   return h > 0 ? (Number(pay) || 0) / h : 0;
 }
 
+/** Round a monetary value to whole cents — avoids float artefacts like
+ *  $62.499999999 creeping into a stored/displayed payment amount. */
+export function roundCurrency(amount) {
+  return Math.round((Number(amount) || 0) * 100) / 100;
+}
+
+/**
+ * The inverse of hourlyRate(): payment for a given hourly rate and
+ * working time, rounded to whole cents. Used by "hourly rate" pay-entry
+ * mode (see app.js) to derive `paymentAmount` before a record is saved —
+ * everything downstream (cycle totals, exports, dashboard) keeps reading
+ * the plain `paymentAmount` field either way, never this rate directly.
+ * Negative rates are clamped to 0 rather than producing a negative
+ * payment; zero minutes or a zero rate both correctly resolve to $0.00,
+ * never NaN/Infinity.
+ */
+export function paymentFromHourlyRate(rateValue, minutes) {
+  const h = decimalHoursFromMinutes(minutes);
+  const r = Math.max(0, Number(rateValue) || 0);
+  return roundCurrency(r * h);
+}
+
 export function formatDuration(minutes) {
   const total = Math.max(0, Math.round(Number(minutes) || 0));
   const h = Math.floor(total / 60);

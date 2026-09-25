@@ -14,7 +14,9 @@ A JSON array. Each record:
   "mapNumber": "string",
   "dayType": "string",         // one of settings.dayTypes[].label at time of entry
   "paymentType": "string",     // one of settings.paymentTypes[].label at time of entry
-  "paymentAmount": 60,         // number
+  "paymentAmount": 60,         // number — always the source of truth for this record's pay
+  "hourlyRate": 24,            // OPTIONAL — only present if this record was entered in
+                                // "hourlyRate" pay-calculation mode; see below
   "notes": "string"
 }
 ```
@@ -85,6 +87,40 @@ not an id. This mirrors the original tracker's behaviour and is what
 makes archiving (rather than deleting) safe: a record's stored string
 never depends on a settings entry continuing to exist.
 
+## Pay calculation mode
+
+`settings.payCalculationMode` is `"payment" | "hourlyRate"` (default:
+`"payment"`) and controls which direction the record form's Pay section
+calculates in:
+
+- **`"payment"`** (the original, default behaviour) — the user types the
+  final payment amount; the hourly rate shown next to it is calculated
+  (`paymentAmount ÷ working hours`).
+- **`"hourlyRate"`** — the user types an hourly rate; the payment amount
+  shown next to it is calculated (`hourlyRate × working hours`, rounded
+  to whole cents via `calculations.js#paymentFromHourlyRate`) and that
+  calculated number — not the rate — is what actually gets stored in the
+  record's `paymentAmount` field.
+
+**`paymentAmount` is always the one number every other part of the app
+reads** — pay-cycle totals, the dashboard, the weighted average rate,
+CSV/PDF/JPG/Excel exports. Nothing downstream needs to know or care which
+mode produced it. A record saved in `"hourlyRate"` mode additionally
+carries an optional `hourlyRate` field purely so the form can show the
+right UI and value if that record is edited again later — it's context,
+not a second source of truth, and a `"payment"`-mode record (old or new)
+never gets this key at all.
+
+**Changing the setting never touches existing records.** It only decides
+which inputs the form shows for the *next* record you add — flipping it
+back and forth does not recalculate, rewrite, or re-derive any
+`paymentAmount` already saved. When editing an existing record, the form
+doesn't follow the current global setting either: it shows whichever
+pay-entry UI matches how *that record* was actually saved (does it have
+a stored `hourlyRate`, or not?), pre-filled with its real stored value —
+so opening an old `$100 for 4h` record for editing always still shows
+$100, never a value re-derived from today's global mode.
+
 ## Settings — `localStorage["modern_work_hours_tracker_v1_settings"]`
 
 ```jsonc
@@ -93,6 +129,7 @@ never depends on a settings entry continuing to exist.
   "currency": "AUD",            // any ISO 4217 code
   "theme": "system",            // "system" | "light" | "dark"
   "payCycleLengthDays": 14,     // 7 | 14 | 30 — see "Pay cycles (automatic)" above
+  "payCalculationMode": "payment", // "payment" | "hourlyRate" — see "Pay calculation mode" above
   "dayTypes": [
     { "id": "day", "label": "Day", "archived": false }
   ],

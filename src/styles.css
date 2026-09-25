@@ -311,6 +311,20 @@ a { color: var(--primary-text); }
   border: 1px solid var(--primary-soft);
 }
 
+.mode-options { display: flex; flex-direction: column; gap: 10px; }
+.mode-option {
+  display: flex; align-items: flex-start; gap: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px; cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.mode-option:hover { border-color: var(--border-strong); }
+.mode-option.is-selected { border-color: var(--primary); background: var(--primary-soft); }
+.mode-option input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+.mode-option-body { display: flex; flex-direction: column; gap: 2px; }
+.mode-option-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.mode-option-desc { font-size: 12px; color: var(--text-muted); }
+
 .form-error { color: var(--danger-text); font-size: 12.5px; min-height: 16px; margin: 4px 0 4px; font-weight: 600; }
 .form-actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
 

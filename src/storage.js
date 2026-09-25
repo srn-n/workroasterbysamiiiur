@@ -44,6 +44,13 @@ function defaultSettings() {
     // matches the app's original hard-coded assumption, so an upgrade
     // changes nothing about existing grouping until this is changed.
     payCycleLengthDays: 14,
+    // How the Pay section of the record form is entered: "payment" (type
+    // in the final amount, hourly rate is calculated — the original
+    // behaviour) or "hourlyRate" (type in a rate, payment is calculated).
+    // This only controls how a NEW record's inputs are labelled/computed;
+    // it's never used to reinterpret a record's already-stored
+    // `paymentAmount` — see docs/data-model.md.
+    payCalculationMode: 'payment',
     dayTypes: dayTypeLabels.map((label) => ({ id: slugify(label), label, archived: false })),
     paymentTypes: paymentTypeLabels.map((label) => ({ id: slugify(label), label, archived: false })),
     defaults: { dayType: dayTypeLabels[0], paymentType: paymentTypeLabels[0], startTime: '09:00' },
@@ -63,7 +70,7 @@ function safeParse(raw, fallback) {
 
 /** Fill in an id/shape gap on an old record without discarding anything. */
 function migrateRecord(record) {
-  return {
+  const migrated = {
     id: record.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)),
     date: record.date || '',
     start: record.start || '',
@@ -75,6 +82,14 @@ function migrateRecord(record) {
     paymentAmount: Number(record.paymentAmount) || 0,
     notes: record.notes || '',
   };
+  // Optional context field: only present on records entered in
+  // "hourlyRate" pay-calculation mode (see settings.payCalculationMode).
+  // A plain "payment"-mode record — old or new — never gets this key at
+  // all, so it round-trips through JSON exactly as before.
+  if (record.hourlyRate !== undefined && record.hourlyRate !== null && record.hourlyRate !== '' && Number.isFinite(Number(record.hourlyRate))) {
+    migrated.hourlyRate = Number(record.hourlyRate);
+  }
+  return migrated;
 }
 
 export function loadRecords() {
@@ -100,6 +115,7 @@ export function loadSettings() {
     dayTypes: Array.isArray(stored.dayTypes) && stored.dayTypes.length ? stored.dayTypes : base.dayTypes,
     paymentTypes: Array.isArray(stored.paymentTypes) && stored.paymentTypes.length ? stored.paymentTypes : base.paymentTypes,
     payCycleLengthDays: [7, 14, 30].includes(Number(stored.payCycleLengthDays)) ? Number(stored.payCycleLengthDays) : base.payCycleLengthDays,
+    payCalculationMode: ['payment', 'hourlyRate'].includes(stored.payCalculationMode) ? stored.payCalculationMode : base.payCalculationMode,
     defaults: { ...base.defaults, ...(stored.defaults || {}) },
   };
 }

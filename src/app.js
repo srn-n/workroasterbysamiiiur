@@ -200,10 +200,31 @@ function optionSelect(id, field, currentValue) {
     </select>`;
 }
 
+/**
+ * Which pay-entry UI to show in the record form: "payment" (type the
+ * final amount, hourly rate is calculated) or "hourlyRate" (type a rate,
+ * payment is calculated). For a NEW record this simply follows the
+ * global settings.payCalculationMode. For an EXISTING record it instead
+ * follows how THAT record was actually entered — a record only carries
+ * the optional `hourlyRate` field if it was saved in hourly-rate mode —
+ * so opening an old payment-mode record for editing always shows the
+ * payment UI (pre-filled with its real stored paymentAmount) regardless
+ * of whatever the global mode has since been changed to. This is what
+ * keeps changing the setting from silently reinterpreting historical
+ * records: see docs/data-model.md "Pay calculation mode".
+ */
+function payModeForForm(editingRecord) {
+  if (editingRecord) {
+    return Number.isFinite(editingRecord.hourlyRate) ? 'hourlyRate' : 'payment';
+  }
+  return state.settings.payCalculationMode === 'hourlyRate' ? 'hourlyRate' : 'payment';
+}
+
 function renderForm() {
   const editingRecord = state.editingId ? state.records.find((r) => r.id === state.editingId) : null;
   const parts = editingRecord ? calc.minutesToParts(calc.recordMinutes(editingRecord)) : { hours: '', minutes: '' };
   const d = state.settings.defaults;
+  const payMode = payModeForForm(editingRecord);
 
   return `
     <section class="panel form-panel" aria-labelledby="form-heading">
@@ -259,13 +280,29 @@ function renderForm() {
           </div>
         </fieldset>
 
-        <fieldset class="field-group">
+        <fieldset class="field-group" data-pay-mode="${payMode}">
           <legend>Pay</legend>
           <div class="grid grid-3">
             <div class="field">
               <label for="f-paytype">Payment type</label>
               ${optionSelect('f-paytype', 'paymentTypes', editingRecord ? editingRecord.paymentType : d.paymentType)}
             </div>
+            ${
+              payMode === 'hourlyRate'
+                ? `
+            <div class="field">
+              <label for="f-hourly-rate">Hourly rate</label>
+              <div class="prefix-input">
+                <span class="prefix">${money(0).replace(/[0-9.,]/g, '').trim() || '$'}</span>
+                <input id="f-hourly-rate" type="number" min="0" step="0.01" placeholder="25.00" value="${editingRecord ? editingRecord.hourlyRate : ''}">
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-rate">Payment amount</label>
+              <output id="f-rate" class="rate-output" for="f-hourly-rate f-hours f-minutes">—</output>
+              <small class="field-help">Hourly rate × actual working time. Updates live.</small>
+            </div>`
+                : `
             <div class="field">
               <label for="f-pay">Payment amount</label>
               <div class="prefix-input">
@@ -277,7 +314,8 @@ function renderForm() {
               <label for="f-rate">Earned per hour</label>
               <output id="f-rate" class="rate-output" for="f-pay f-hours f-minutes">—</output>
               <small class="field-help">Payment ÷ actual working time. Updates live.</small>
-            </div>
+            </div>`
+            }
           </div>
         </fieldset>
 
@@ -468,6 +506,26 @@ function renderSettingsModal() {
         <option value="30" ${state.settings.payCycleLengthDays === 30 ? 'selected' : ''}>30 days</option>
       </select>
       <small class="field-help">Every record's pay cycle is calculated automatically from its date and this length — changing it regroups your existing records without changing any stored data.</small>
+    </div>
+    <div class="field">
+      <label id="pay-mode-label">Pay calculation</label>
+      <p class="field-help" style="margin:0 0 10px">Choose how you normally record your pay. This only changes how <strong>new</strong> records are entered — it never recalculates a record you've already saved.</p>
+      <div class="mode-options" role="radiogroup" aria-labelledby="pay-mode-label">
+        <label class="mode-option ${state.settings.payCalculationMode === 'payment' ? 'is-selected' : ''}">
+          <input type="radio" name="pay-calc-mode" value="payment" ${state.settings.payCalculationMode === 'payment' ? 'checked' : ''}>
+          <span class="mode-option-body">
+            <span class="mode-option-title">Payment amount</span>
+            <span class="mode-option-desc">I enter the final amount I receive, and WorkTrack calculates my hourly rate.</span>
+          </span>
+        </label>
+        <label class="mode-option ${state.settings.payCalculationMode === 'hourlyRate' ? 'is-selected' : ''}">
+          <input type="radio" name="pay-calc-mode" value="hourlyRate" ${state.settings.payCalculationMode === 'hourlyRate' ? 'checked' : ''}>
+          <span class="mode-option-body">
+            <span class="mode-option-title">Hourly rate</span>
+            <span class="mode-option-desc">I enter my hourly rate, and WorkTrack calculates the payment from my working time.</span>
+          </span>
+        </label>
+      </div>
     </div>`;
 
   const optionsTab = `
@@ -563,16 +621,34 @@ function render() {
 }
 
 // ---------------------------------------------------------------------
-// Live rate calculation (patches one field, no full re-render)
+// Live pay calculation (patches one field, no full re-render)
+// -----------------------------------------------------------------------
+// Bidirectional: which direction runs depends on which input the form is
+// currently showing (see payModeForForm/renderForm) — #f-pay editable +
+// #f-rate showing the computed hourly rate, or #f-hourly-rate editable +
+// #f-rate showing the computed payment. Either way this only updates the
+// live preview; nothing is written to the record until submit.
 // ---------------------------------------------------------------------
 
 function updateLiveRate() {
-  const pay = Number(document.getElementById('f-pay')?.value || 0);
   const h = document.getElementById('f-hours')?.value || 0;
   const m = document.getElementById('f-minutes')?.value || 0;
   const mins = calc.durationMinutes(h, m);
   const out = document.getElementById('f-rate');
-  if (out) out.textContent = pay > 0 && mins > 0 ? rate(pay, mins) : '—';
+  if (!out) return;
+
+  const hourlyInput = document.getElementById('f-hourly-rate');
+  if (hourlyInput) {
+    // Hourly-rate mode: rate is the input, payment is computed.
+    const hourlyRateValue = Number(hourlyInput.value || 0);
+    out.textContent = mins > 0 ? money(calc.paymentFromHourlyRate(hourlyRateValue, mins)) : money(0);
+    return;
+  }
+
+  // Payment mode (default/original behaviour): payment is the input,
+  // hourly rate is computed.
+  const pay = Number(document.getElementById('f-pay')?.value || 0);
+  out.textContent = pay > 0 && mins > 0 ? rate(pay, mins) : '—';
 }
 
 /** Live-updates the read-only "Pay cycle" preview in the form as the
@@ -594,6 +670,7 @@ function submitForm(event) {
   event.preventDefault();
   const hoursInput = document.getElementById('f-hours').value;
   const minutesInput = document.getElementById('f-minutes').value;
+  const workingMinutes = calc.durationMinutes(hoursInput, minutesInput);
 
   const data = {
     date: document.getElementById('f-date').value,
@@ -601,13 +678,26 @@ function submitForm(event) {
     // No manual cycle field: the pay cycle is derived automatically from
     // `date` + settings.payCycleLengthDays (see calculations.js#getCycleForDate)
     // every time it's displayed, rather than stored per record.
-    workingMinutes: calc.durationMinutes(hoursInput, minutesInput),
+    workingMinutes,
     mapNumber: document.getElementById('f-map').value.trim(),
     dayType: document.getElementById('f-daytype').value,
     paymentType: document.getElementById('f-paytype').value,
-    paymentAmount: Number(document.getElementById('f-pay').value) || 0,
     notes: document.getElementById('f-notes').value.trim(),
   };
+
+  // Which pay input the form actually rendered decides how `paymentAmount`
+  // is derived — see payModeForForm(). Reading the DOM here (rather than
+  // re-checking settings.payCalculationMode) keeps this correct even when
+  // editing a record whose own mode differs from the current global
+  // setting: whichever field was actually shown/edited is authoritative.
+  const hourlyInput = document.getElementById('f-hourly-rate');
+  if (hourlyInput) {
+    const hourlyRateValue = Math.max(0, Number(hourlyInput.value) || 0);
+    data.hourlyRate = hourlyRateValue;
+    data.paymentAmount = calc.paymentFromHourlyRate(hourlyRateValue, workingMinutes);
+  } else {
+    data.paymentAmount = Number(document.getElementById('f-pay').value) || 0;
+  }
 
   if (!data.date || !data.start || hoursInput === '' || minutesInput === '' || data.workingMinutes < 0) {
     state.formError = 'Date, starting time, hours and minutes are required.';
@@ -828,7 +918,7 @@ function wireEvents() {
     state.formError = '';
     render();
   });
-  ['f-pay', 'f-hours', 'f-minutes'].forEach((id) => document.getElementById(id)?.addEventListener('input', updateLiveRate));
+  ['f-pay', 'f-hourly-rate', 'f-hours', 'f-minutes'].forEach((id) => document.getElementById(id)?.addEventListener('input', updateLiveRate));
   updateLiveRate();
   document.getElementById('f-date')?.addEventListener('input', updateCyclePreview);
   updateCyclePreview();
@@ -887,6 +977,18 @@ function wireEvents() {
     persist();
     render();
   });
+  document.querySelectorAll('input[name="pay-calc-mode"]').forEach((input) =>
+    input.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      const mode = e.target.value === 'hourlyRate' ? 'hourlyRate' : 'payment';
+      // Changing this setting only affects how the NEXT record is
+      // entered/saved (see payModeForForm) — it deliberately does not
+      // touch state.records, so no existing paymentAmount is recalculated.
+      state.settings = { ...state.settings, payCalculationMode: mode };
+      persist();
+      render();
+    })
+  );
 
   // Data modal
   document.getElementById('btn-export-json')?.addEventListener('click', exportJSON);
