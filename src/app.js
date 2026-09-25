@@ -311,8 +311,8 @@ function renderForm() {
           </div>
           <div class="grid grid-3">
             <div class="field">
-              <label for="f-map">Map / job number <span class="optional">optional</span></label>
-              <input id="f-map" placeholder="e.g. Grid B4" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
+              <label for="f-map">Period <span class="optional">optional</span></label>
+              <input id="f-map" placeholder="e.g. First period" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
             </div>
           </div>`
               : `
@@ -332,8 +332,8 @@ function renderForm() {
               ${optionSelect('f-daytype', 'dayTypes', editingRecord ? editingRecord.dayType : d.dayType)}
             </div>
             <div class="field">
-              <label for="f-map">Map / job number <span class="optional">optional</span></label>
-              <input id="f-map" placeholder="e.g. Grid B4" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
+              <label for="f-map">Period <span class="optional">optional</span></label>
+              <input id="f-map" placeholder="e.g. First period" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
             </div>
           </div>`
           }
@@ -422,6 +422,7 @@ function renderRecordRow(r) {
         </div>
         <div class="record-time">
           <span class="record-start">${calc.formatTime12h(r.start)}</span>
+          ${calc.hasEndTime(r) ? `<span class="record-end">${calc.formatTime12h(r.end)}</span>` : ''}
           <span class="record-duration">${calc.formatDuration(mins)}</span>
         </div>
         <div class="record-notes">${esc(r.notes) || '<span class="muted">No notes</span>'}</div>
@@ -437,7 +438,7 @@ function renderRecordRow(r) {
       <div class="record-meta">
         <span class="tag">${esc(r.dayType || 'Unspecified')}</span>
         <span class="tag muted-tag">${esc(r.paymentType || 'Unspecified')}</span>
-        ${r.mapNumber ? `<span class="meta-item">Map <b>${esc(r.mapNumber)}</b></span>` : ''}
+        ${r.mapNumber ? `<span class="meta-item">Period <b>${esc(r.mapNumber)}</b></span>` : ''}
         ${legacyCycle ? `<span class="meta-item legacy-cycle" title="Manually entered before automatic cycles were added">Was <b>${esc(legacyCycle)}</b></span>` : ''}
       </div>
     </li>`;
