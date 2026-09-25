@@ -231,7 +231,11 @@ function renderForm() {
       <div class="panel-head">
         <div>
           <h2 id="form-heading">${editingRecord ? 'Edit record' : 'Add a work record'}</h2>
-          <p class="panel-hint">The hourly rate is calculated automatically — you never need to type it in.</p>
+          <p class="panel-hint">${
+            payMode === 'hourlyRate'
+              ? 'Enter your hourly rate. The payment amount is calculated automatically.'
+              : 'Enter the final payment amount. Your hourly rate is calculated automatically.'
+          }</p>
         </div>
         ${editingRecord ? `<span class="editing-badge">Editing ${esc(calc.shortDateLabel(editingRecord.date))}</span>` : ''}
       </div>
