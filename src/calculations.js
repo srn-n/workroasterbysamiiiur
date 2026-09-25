@@ -72,6 +72,36 @@ export function paymentFromHourlyRate(rateValue, minutes) {
   return roundCurrency(r * h);
 }
 
+/**
+ * Does this record carry a usable optional "end" (ending time) value?
+ * Only records saved through the ending-time workflow have this field
+ * at all — a record entered with manual hours/minutes (old or new)
+ * never gets it. See docs/data-model.md "Ending time".
+ */
+export function hasEndTime(record) {
+  return typeof record?.end === 'string' && /^\d{2}:\d{2}$/.test(record.end);
+}
+
+/**
+ * Working minutes between a "HH:MM" starting time and a "HH:MM" ending
+ * time. Handles overnight shifts: whenever the ending time is not later
+ * than the starting time, it's treated as falling on the following day
+ * (e.g. 22:00 -> 06:00 is 8 hours, not a negative duration) — this never
+ * requires a separate end date from the user. Returns null, rather than
+ * 0 or a guess, when either time is missing or not a valid "HH:MM"
+ * string, so a caller can tell "not enough info yet" apart from a real
+ * zero-length shift and avoid calculating a misleading duration.
+ */
+export function minutesFromTimes(start, end) {
+  if (!/^\d{2}:\d{2}$/.test(start || '') || !/^\d{2}:\d{2}$/.test(end || '')) return null;
+  const [startHour, startMinute] = start.split(':').map(Number);
+  const [endHour, endMinute] = end.split(':').map(Number);
+  const startTotal = startHour * 60 + startMinute;
+  let endTotal = endHour * 60 + endMinute;
+  if (endTotal < startTotal) endTotal += 24 * 60; // overnight: end falls on the next day
+  return endTotal - startTotal;
+}
+
 export function formatDuration(minutes) {
   const total = Math.max(0, Math.round(Number(minutes) || 0));
   const h = Math.floor(total / 60);

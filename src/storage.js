@@ -15,7 +15,7 @@
  *     unknown/future fields round-trip untouched.
  * -----------------------------------------------------------------------
  */
-import { recordMinutes, getCycleForDate } from './calculations.js';
+import { recordMinutes, getCycleForDate, hasEndTime } from './calculations.js';
 
 export const RECORDS_KEY = 'modern_work_hours_tracker_v1';
 export const SETTINGS_KEY = 'modern_work_hours_tracker_v1_settings';
@@ -51,6 +51,15 @@ function defaultSettings() {
     // it's never used to reinterpret a record's already-stored
     // `paymentAmount` — see docs/data-model.md.
     payCalculationMode: 'payment',
+    // Optional workflow: when true, a NEW record's working time is
+    // calculated automatically from Starting time + Ending time instead
+    // of manually typed hours/minutes. Off by default so an upgrade
+    // changes nothing until the user opts in — see
+    // calculations.js#minutesFromTimes and docs/data-model.md "Ending
+    // time". Never flipped automatically by this app itself (e.g. when
+    // payCalculationMode changes) — only ever set by the user via the
+    // Settings toggle.
+    calculateDurationFromEndTime: false,
     dayTypes: dayTypeLabels.map((label) => ({ id: slugify(label), label, archived: false })),
     paymentTypes: paymentTypeLabels.map((label) => ({ id: slugify(label), label, archived: false })),
     defaults: { dayType: dayTypeLabels[0], paymentType: paymentTypeLabels[0], startTime: '09:00' },
@@ -89,6 +98,15 @@ function migrateRecord(record) {
   if (record.hourlyRate !== undefined && record.hourlyRate !== null && record.hourlyRate !== '' && Number.isFinite(Number(record.hourlyRate))) {
     migrated.hourlyRate = Number(record.hourlyRate);
   }
+  // Optional context field: only present on records entered through the
+  // ending-time workflow (see settings.calculateDurationFromEndTime). A
+  // record without a valid stored `end` — old or new — never gets this
+  // key, and nothing is ever invented or derived from workingMinutes to
+  // fill it in. `workingMinutes` above remains the source of truth for
+  // duration either way.
+  if (hasEndTime(record)) {
+    migrated.end = record.end;
+  }
   return migrated;
 }
 
@@ -116,6 +134,8 @@ export function loadSettings() {
     paymentTypes: Array.isArray(stored.paymentTypes) && stored.paymentTypes.length ? stored.paymentTypes : base.paymentTypes,
     payCycleLengthDays: [7, 14, 30].includes(Number(stored.payCycleLengthDays)) ? Number(stored.payCycleLengthDays) : base.payCycleLengthDays,
     payCalculationMode: ['payment', 'hourlyRate'].includes(stored.payCalculationMode) ? stored.payCalculationMode : base.payCalculationMode,
+    calculateDurationFromEndTime:
+      typeof stored.calculateDurationFromEndTime === 'boolean' ? stored.calculateDurationFromEndTime : base.calculateDurationFromEndTime,
     defaults: { ...base.defaults, ...(stored.defaults || {}) },
   };
 }

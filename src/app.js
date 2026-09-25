@@ -220,11 +220,39 @@ function payModeForForm(editingRecord) {
   return state.settings.payCalculationMode === 'hourlyRate' ? 'hourlyRate' : 'payment';
 }
 
+/**
+ * Whether the record form should show the Ending-time workflow (Starting
+ * time + Ending time, working time calculated automatically) instead of
+ * the original manual hours/minutes inputs. Mirrors payModeForForm's
+ * split between editing and adding:
+ *
+ * - Editing an existing record always follows that record's own history
+ *   — does it carry a stored `end`? A record without one never invents
+ *   or switches to Ending-time mode just because the global setting is
+ *   on, so opening an old manual-duration record for editing always
+ *   still shows its manual duration, untouched. See docs/data-model.md
+ *   "Ending time".
+ * - A brand-new record follows settings.calculateDurationFromEndTime,
+ *   OR'd with the record defaulting to Ending-time mode whenever
+ *   settings.payCalculationMode is "hourlyRate" (Ending time is
+ *   particularly useful there — see the settings docs). This is a
+ *   render-time default only: nothing is written back to
+ *   calculateDurationFromEndTime when payCalculationMode changes, so the
+ *   two settings never permanently force each other.
+ */
+function durationModeForForm(editingRecord) {
+  if (editingRecord) {
+    return calc.hasEndTime(editingRecord);
+  }
+  return state.settings.calculateDurationFromEndTime || payModeForForm(null) === 'hourlyRate';
+}
+
 function renderForm() {
   const editingRecord = state.editingId ? state.records.find((r) => r.id === state.editingId) : null;
   const parts = editingRecord ? calc.minutesToParts(calc.recordMinutes(editingRecord)) : { hours: '', minutes: '' };
   const d = state.settings.defaults;
   const payMode = payModeForForm(editingRecord);
+  const useEndTime = durationModeForForm(editingRecord);
 
   return `
     <section class="panel form-panel" aria-labelledby="form-heading">
@@ -260,8 +288,34 @@ function renderForm() {
           </div>
         </fieldset>
 
-        <fieldset class="field-group">
+        <fieldset class="field-group" data-duration-mode="${useEndTime ? 'end-time' : 'manual'}">
           <legend>Duration</legend>
+          ${
+            useEndTime
+              ? `
+          <div class="grid grid-3">
+            <div class="field">
+              <label for="f-end">Ending time</label>
+              <input id="f-end" type="time" required value="${editingRecord && calc.hasEndTime(editingRecord) ? editingRecord.end : ''}">
+              <small class="field-help">For example, ending time: 5:30 PM</small>
+            </div>
+            <div class="field">
+              <label for="f-duration-output">Working time</label>
+              <output id="f-duration-output" class="rate-output" for="f-start f-end">—</output>
+              <small class="field-help">Working time is calculated automatically from the starting and ending times.</small>
+            </div>
+            <div class="field">
+              <label for="f-daytype">Day type</label>
+              ${optionSelect('f-daytype', 'dayTypes', editingRecord ? editingRecord.dayType : d.dayType)}
+            </div>
+          </div>
+          <div class="grid grid-3">
+            <div class="field">
+              <label for="f-map">Map / job number <span class="optional">optional</span></label>
+              <input id="f-map" placeholder="e.g. Grid B4" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
+            </div>
+          </div>`
+              : `
           <div class="grid grid-3">
             <div class="field">
               <label for="f-hours">Working time</label>
@@ -281,7 +335,8 @@ function renderForm() {
               <label for="f-map">Map / job number <span class="optional">optional</span></label>
               <input id="f-map" placeholder="e.g. Grid B4" value="${editingRecord ? esc(editingRecord.mapNumber) : ''}">
             </div>
-          </div>
+          </div>`
+          }
         </fieldset>
 
         <fieldset class="field-group" data-pay-mode="${payMode}">
@@ -303,7 +358,7 @@ function renderForm() {
             </div>
             <div class="field">
               <label for="f-rate">Payment amount</label>
-              <output id="f-rate" class="rate-output" for="f-hourly-rate f-hours f-minutes">—</output>
+              <output id="f-rate" class="rate-output" for="${useEndTime ? 'f-hourly-rate f-start f-end' : 'f-hourly-rate f-hours f-minutes'}">—</output>
               <small class="field-help">Hourly rate × actual working time. Updates live.</small>
             </div>`
                 : `
@@ -316,7 +371,7 @@ function renderForm() {
             </div>
             <div class="field">
               <label for="f-rate">Earned per hour</label>
-              <output id="f-rate" class="rate-output" for="f-pay f-hours f-minutes">—</output>
+              <output id="f-rate" class="rate-output" for="${useEndTime ? 'f-pay f-start f-end' : 'f-pay f-hours f-minutes'}">—</output>
               <small class="field-help">Payment ÷ actual working time. Updates live.</small>
             </div>`
             }
@@ -530,6 +585,14 @@ function renderSettingsModal() {
           </span>
         </label>
       </div>
+    </div>
+    <div class="field">
+      <label class="checkbox-field" for="s-end-time-mode">
+        <input type="checkbox" id="s-end-time-mode" ${state.settings.calculateDurationFromEndTime ? 'checked' : ''}>
+        <span>Calculate working time from ending time</span>
+      </label>
+      <p class="field-help" style="margin:6px 0 0">Working time is calculated automatically from the starting and ending times.</p>
+      <p class="field-help" style="margin:2px 0 0">For example, ending time: 5:30 PM</p>
     </div>`;
 
   const optionsTab = `
@@ -634,10 +697,40 @@ function render() {
 // live preview; nothing is written to the record until submit.
 // ---------------------------------------------------------------------
 
-function updateLiveRate() {
+/**
+ * The form's current working-minutes value, read straight from whichever
+ * Duration inputs are actually rendered — never from state, so this stays
+ * correct while the user is still typing. Returns null when there isn't
+ * enough information yet to calculate a real duration (Ending-time mode
+ * with a missing Starting or Ending time), so callers can show "—"
+ * instead of a misleading number.
+ */
+function currentFormMinutes() {
+  const endInput = document.getElementById('f-end');
+  if (endInput) {
+    const start = document.getElementById('f-start')?.value || '';
+    return calc.minutesFromTimes(start, endInput.value);
+  }
   const h = document.getElementById('f-hours')?.value || 0;
   const m = document.getElementById('f-minutes')?.value || 0;
-  const mins = calc.durationMinutes(h, m);
+  return calc.durationMinutes(h, m);
+}
+
+/** Live-updates the read-only "Working time" output in Ending-time mode
+ *  as Starting/Ending time change. No-op in manual mode, where the
+ *  hours/minutes inputs are themselves the value — there's nothing to
+ *  compute or patch. */
+function updateDurationOutput() {
+  const out = document.getElementById('f-duration-output');
+  if (!out) return;
+  const mins = currentFormMinutes();
+  out.textContent = mins === null ? '—' : calc.formatDuration(mins);
+}
+
+function updateLiveRate() {
+  updateDurationOutput();
+  const minsRaw = currentFormMinutes();
+  const mins = minsRaw === null ? 0 : minsRaw;
   const out = document.getElementById('f-rate');
   if (!out) return;
 
@@ -672,13 +765,49 @@ function updateCyclePreview() {
 
 function submitForm(event) {
   event.preventDefault();
-  const hoursInput = document.getElementById('f-hours').value;
-  const minutesInput = document.getElementById('f-minutes').value;
-  const workingMinutes = calc.durationMinutes(hoursInput, minutesInput);
+  const dateVal = document.getElementById('f-date').value;
+  const startVal = document.getElementById('f-start').value;
+
+  // Which Duration inputs the form actually rendered decides how
+  // `workingMinutes` (and the optional `end`) are derived — see
+  // durationModeForForm(). Reading the DOM here (rather than re-checking
+  // settings.calculateDurationFromEndTime) keeps this correct even when
+  // editing a record whose own mode differs from the current global
+  // setting: whichever fields were actually shown are authoritative.
+  const endInput = document.getElementById('f-end');
+  const usingEndTime = !!endInput;
+
+  let workingMinutes;
+  let hoursInput = '';
+  let minutesInput = '';
+  if (usingEndTime) {
+    workingMinutes = calc.minutesFromTimes(startVal, endInput.value);
+  } else {
+    hoursInput = document.getElementById('f-hours').value;
+    minutesInput = document.getElementById('f-minutes').value;
+    workingMinutes = hoursInput === '' || minutesInput === '' ? null : calc.durationMinutes(hoursInput, minutesInput);
+  }
+
+  if (!dateVal || !startVal) {
+    state.formError = 'Date and starting time are required.';
+    render();
+    return;
+  }
+  if (usingEndTime && workingMinutes === null) {
+    state.formError = 'Starting time and ending time are both required to calculate working time.';
+    render();
+    return;
+  }
+  if (!usingEndTime && (workingMinutes === null || workingMinutes < 0)) {
+    state.formError = 'Date, starting time, hours and minutes are required.';
+    render();
+    return;
+  }
+  state.formError = '';
 
   const data = {
-    date: document.getElementById('f-date').value,
-    start: document.getElementById('f-start').value,
+    date: dateVal,
+    start: startVal,
     // No manual cycle field: the pay cycle is derived automatically from
     // `date` + settings.payCycleLengthDays (see calculations.js#getCycleForDate)
     // every time it's displayed, rather than stored per record.
@@ -688,12 +817,14 @@ function submitForm(event) {
     paymentType: document.getElementById('f-paytype').value,
     notes: document.getElementById('f-notes').value.trim(),
   };
+  // Optional context field: only set when this form was actually showing
+  // the Ending-time workflow — see storage.js#migrateRecord and
+  // docs/data-model.md "Ending time". A record built in manual mode never
+  // gets this key.
+  if (usingEndTime) {
+    data.end = endInput.value;
+  }
 
-  // Which pay input the form actually rendered decides how `paymentAmount`
-  // is derived — see payModeForForm(). Reading the DOM here (rather than
-  // re-checking settings.payCalculationMode) keeps this correct even when
-  // editing a record whose own mode differs from the current global
-  // setting: whichever field was actually shown/edited is authoritative.
   const hourlyInput = document.getElementById('f-hourly-rate');
   if (hourlyInput) {
     const hourlyRateValue = Math.max(0, Number(hourlyInput.value) || 0);
@@ -702,13 +833,6 @@ function submitForm(event) {
   } else {
     data.paymentAmount = Number(document.getElementById('f-pay').value) || 0;
   }
-
-  if (!data.date || !data.start || hoursInput === '' || minutesInput === '' || data.workingMinutes < 0) {
-    state.formError = 'Date, starting time, hours and minutes are required.';
-    render();
-    return;
-  }
-  state.formError = '';
 
   if (state.editingId) {
     const r = state.records.find((x) => x.id === state.editingId);
@@ -922,7 +1046,7 @@ function wireEvents() {
     state.formError = '';
     render();
   });
-  ['f-pay', 'f-hourly-rate', 'f-hours', 'f-minutes'].forEach((id) => document.getElementById(id)?.addEventListener('input', updateLiveRate));
+  ['f-pay', 'f-hourly-rate', 'f-hours', 'f-minutes', 'f-start', 'f-end'].forEach((id) => document.getElementById(id)?.addEventListener('input', updateLiveRate));
   updateLiveRate();
   document.getElementById('f-date')?.addEventListener('input', updateCyclePreview);
   updateCyclePreview();
@@ -993,6 +1117,15 @@ function wireEvents() {
       render();
     })
   );
+  document.getElementById('s-end-time-mode')?.addEventListener('change', (e) => {
+    // Independent of payCalculationMode — see durationModeForForm(): a
+    // change here only affects how the NEXT new record's form defaults,
+    // and never touches state.records, so no existing record's stored
+    // workingMinutes/end is recalculated or invented.
+    state.settings = { ...state.settings, calculateDurationFromEndTime: e.target.checked };
+    persist();
+    render();
+  });
 
   // Data modal
   document.getElementById('btn-export-json')?.addEventListener('click', exportJSON);

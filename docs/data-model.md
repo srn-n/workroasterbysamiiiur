@@ -17,6 +17,8 @@ A JSON array. Each record:
   "paymentAmount": 60,         // number — always the source of truth for this record's pay
   "hourlyRate": 24,            // OPTIONAL — only present if this record was entered in
                                 // "hourlyRate" pay-calculation mode; see below
+  "end": "17:30",               // OPTIONAL — only present if this record was entered
+                                // through the Ending-time workflow; see "Ending time" below
   "notes": "string"
 }
 ```
@@ -121,6 +123,49 @@ a stored `hourlyRate`, or not?), pre-filled with its real stored value —
 so opening an old `$100 for 4h` record for editing always still shows
 $100, never a value re-derived from today's global mode.
 
+## Ending time (optional)
+
+`settings.calculateDurationFromEndTime` is a boolean (default: `false`)
+that lets a record's `workingMinutes` be calculated automatically from a
+Starting time and an Ending time, instead of typed in as hours/minutes.
+It's purely an alternate way to *fill in* `workingMinutes` — the field
+itself, and everything downstream that reads it (pay-cycle totals, the
+dashboard, exports, the weighted average rate), is completely unchanged.
+
+- **Off** (the default) — the record form shows the original hours +
+  minutes inputs. Nothing about this workflow is visible.
+- **On** — the record form instead shows Starting time, Ending time and a
+  read-only calculated Working time. The user can't type a duration
+  directly while this is active; it's always `end - start`, computed by
+  `calculations.js#minutesFromTimes()` and rounded to whole minutes, the
+  same as every other duration in this app.
+
+**Overnight shifts:** if the ending time is not later than the starting
+time, it's treated as falling on the *following* day (e.g. `22:00` →
+`06:00` is 8 hours, `23:30` → `00:30` is 1 hour) — this never requires a
+separate end-date field. A missing Starting or Ending time never produces
+a guessed duration; `minutesFromTimes()` returns `null` and the form
+shows a validation message instead of saving.
+
+**Interaction with pay-calculation mode:** for a brand-new record, the
+Ending-time workflow is also shown by default whenever
+`settings.payCalculationMode` is `"hourlyRate"` (entering a start/end
+time alongside an hourly rate is the natural way to fill that form in) —
+see `app.js#durationModeForForm()`. This is a render-time default only:
+switching `payCalculationMode` never writes to
+`calculateDurationFromEndTime` or vice versa, so the two settings stay
+independently toggleable and neither permanently forces the other.
+
+**Editing an existing record** always follows *that record's own*
+history rather than the current global setting: if it has a stored `end`,
+the form restores the Ending-time inputs and recalculates its working
+time from them; if it doesn't, the form shows the original manual
+hours/minutes UI, pre-filled with its existing `workingMinutes` —
+unchanged, never invented, never re-derived. Turning the global setting
+on or off never rewrites, recalculates or touches any already-saved
+record — exactly like `payCalculationMode` (see above), only the *next*
+record you add or edit is affected.
+
 ## Settings — `localStorage["modern_work_hours_tracker_v1_settings"]`
 
 ```jsonc
@@ -130,6 +175,7 @@ $100, never a value re-derived from today's global mode.
   "theme": "system",            // "system" | "light" | "dark"
   "payCycleLengthDays": 14,     // 7 | 14 | 30 — see "Pay cycles (automatic)" above
   "payCalculationMode": "payment", // "payment" | "hourlyRate" — see "Pay calculation mode" above
+  "calculateDurationFromEndTime": false, // see "Ending time (optional)" above
   "dayTypes": [
     { "id": "day", "label": "Day", "archived": false }
   ],
